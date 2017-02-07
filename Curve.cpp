@@ -160,7 +160,8 @@ void cCurve::Eval(double time, Eigen::VectorXd& out_result) const
 																		 // stub, position just moves along the x-axis with time
 	//std::cout << "GetDim" << GetDim() << std::endl;
 	//std::cout << "time" << time << std::endl;
-
+	Eigen::Vector3d time_vector;
+	time_vector << 1, time, time*time;
 
 	// first build the basis matrix M for the current curve style (mCurveType)
 	// then build the T polynomial vector
