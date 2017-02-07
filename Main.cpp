@@ -65,11 +65,12 @@ void EigenExamples()
 	std::cout << M3 << std::endl << std::endl;
 	std::cout << "M4" << std::endl;
 	std::cout << M4 << std::endl << std::endl;
+
 }
 
 int main(int argc, char ** argv) {
 
-	EigenExamples();
+	//EigenExamples();
 
 	try {
 		nanogui::init();

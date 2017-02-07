@@ -148,9 +148,21 @@ void cCurve::Eval(double time, Eigen::VectorXd& out_result) const
 {
 	// TODO (CPSC426): Evaluates a parametric curve at the given time
 	out_result = Eigen::VectorXd::Zero(GetDim());
-	out_result[0] = time; // stub, position just moves along the x-axis with time
+	// Set each of out_result's dimensions to be time
+	out_result << time*time, time, 1;
 
-	// first build the basis matrix M for the current curve tyle (mCurveType)
+	// Basis Matrix Construction
+	Eigen::Matrix4d basis_matrix_cr;
+	basis_matrix_cr << 0, -0.5, 1.0, -0.5,
+	 		 							 1,  0,  -2.5,  1.5,
+			 						 	 0,  0.5, 2.0, -1.5,
+			 						   0,  0,  -0.5,  0.5;
+																		 // stub, position just moves along the x-axis with time
+	//std::cout << "GetDim" << GetDim() << std::endl;
+	//std::cout << "time" << time << std::endl;
+
+
+	// first build the basis matrix M for the current curve style (mCurveType)
 	// then build the T polynomial vector
 	// finally build the geometry matrix G for the curve segment
 }
@@ -184,14 +196,14 @@ bool cCurve::ParseAnchors(const Json::Value& root)
 {
 	// parses an array of anchors from root
 
-	assert(root.isArray()); 
+	assert(root.isArray());
 	bool succ = true;
 
 	int num_anchors = root.size();
 	mAnchors.resize(num_anchors);
 
 	// anchors are stored as a list of points
-	// the points can be of any dimension, but the dimensions of 
+	// the points can be of any dimension, but the dimensions of
 	// all points should be the same
 	for (int i = 0; i < num_anchors; ++i)
 	{
@@ -241,7 +253,7 @@ bool cCurve::ParseAnchor(const Json::Value& root, tAnchor& out_anchor) const
 	{
 		succ = false;
 	}
-	
+
 	return succ;
 }
 
