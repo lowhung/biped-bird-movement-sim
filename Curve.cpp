@@ -149,7 +149,6 @@ void cCurve::Eval(double time, Eigen::VectorXd& out_result) const
 	// TODO (CPSC426): Evaluates a parametric curve at the given time
 	out_result = Eigen::VectorXd::Zero(GetDim());
 	// Set each of out_result's dimensions to be time
-	out_result << time*time, time, 1;
 
 	// Basis Matrix Construction
 	Eigen::Matrix4d basis_matrix_cr;
@@ -157,11 +156,16 @@ void cCurve::Eval(double time, Eigen::VectorXd& out_result) const
 	 		 							 1,  0,  -2.5,  1.5,
 			 						 	 0,  0.5, 2.0, -1.5,
 			 						   0,  0,  -0.5,  0.5;
-																		 // stub, position just moves along the x-axis with time
-	//std::cout << "GetDim" << GetDim() << std::endl;
-	//std::cout << "time" << time << std::endl;
+Eigen::Matrix3d basis_matrix_bird_cr;
+basis_matrix_bird_cr << -0.5, 1.0, -0.5,
+													0, -2.5, 1.5,
+													0.5, 2.0, -1.5;
+
 	Eigen::Vector3d time_vector;
-	time_vector << 1, time, time*time;
+	time_vector << time*time*time, time*time, time, 1.0;
+
+	out_result = time_vector * basis_matrix_cr;
+
 
 	// first build the basis matrix M for the current curve style (mCurveType)
 	// then build the T polynomial vector
