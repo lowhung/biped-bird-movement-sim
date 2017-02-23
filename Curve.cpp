@@ -7,6 +7,7 @@ const std::string gAnchorsKey = "Anchors";
 const std::string gAnchorPosKey = "Pos";
 const std::string gSegmentDurationKey = "SegmentDuration";
 
+
 cCurve::tAnchor::tAnchor()
 {
 	mPos.setZero();
@@ -150,23 +151,115 @@ void cCurve::Eval(double time, Eigen::VectorXd& out_result) const
 	out_result = Eigen::VectorXd::Zero(GetDim());
 	// Set each of out_result's dimensions to be time
 
-	// Basis Matrix Construction
-	Eigen::Matrix4d basis_matrix_cr;
-	basis_matrix_cr << 0, -0.5, 1.0, -0.5,
-	 		 							 1,  0,  -2.5,  1.5,
-			 						 	 0,  0.5, 2.0, -1.5,
-			 						   0,  0,  -0.5,  0.5;
-Eigen::Matrix3d basis_matrix_bird_cr;
-basis_matrix_bird_cr << -0.5, 1.0, -0.5,
-													0, -2.5, 1.5,
-													0.5, 2.0, -1.5;
+	const tAnchor& anchor_0 = mAnchors[0];
+	const tAnchor& anchor_1 = mAnchors[1];
+	const tAnchor& anchor_2 = mAnchors[2];
+	const tAnchor& anchor_3 = mAnchors[3];
+	const tAnchor& anchor_4 = mAnchors[4];
 
-	Eigen::Vector3d time_vector;
-	time_vector << time*time*time, time*time, time, 1.0;
+	std::cout << GetAnchorTime(0) << std::endl;
+	std::cout << GetAnchorTime(1) << std::endl;
+	std::cout << GetAnchorTime(2) << std::endl;
+	std::cout << GetAnchorTime(3) << std::endl;
 
-	out_result = time_vector * basis_matrix_cr;
+// 	for (int i = 0; i <= GetNumSegments(); i++){
+// 	printf("Segment %i:\t", i);
+// 	int anchor_beg, anchor_end;
+// 	GetAnchors(i, anchor_beg, anchor_end);
 
+// 	std::cout << anchor_beg << std::endl;
+// 	std::cout << anchor_end << std::endl;
+// }
 
+// Basis Matrix Construction B-SPLINE
+Eigen::Matrix4d basis_matrix_bird_bs;
+basis_matrix_bird_bs << -1.0, 3.0, -3.0, 1.0,
+						 3.0,-6.0,  3.0, 0.0,
+						-3.0, 0.0,  3.0, 0.0,
+						 1.0, 4.0,  1.0, 0.0;
+
+// Basis Matrix Construction CATMULL_ROM
+Eigen::Matrix4d basis_matrix_bird_cr;
+basis_matrix_bird_cr << -1.0,  3.0, -3.0,  1.0,
+						 2.0, -5.0,  4.0, -1.0,
+						-1.0,  0.0,  1.0,  0.0,
+						 0.0,  2.0,  0.0,  0.0;
+
+// Geometric Matrix Construction CATMULL_ROM
+Eigen::MatrixXd geometric_matrix_bird_1(4, GetDim());
+geometric_matrix_bird_1 <<	anchor_0.mPos[0], anchor_0.mPos[1], anchor_0.mPos[2],
+							anchor_0.mPos[0], anchor_0.mPos[1], anchor_0.mPos[2],
+							anchor_1.mPos[0], anchor_1.mPos[1], anchor_1.mPos[2],
+						    anchor_2.mPos[0], anchor_2.mPos[1], anchor_2.mPos[2];
+
+Eigen::MatrixXd geometric_matrix_bird_2(4, GetDim());
+geometric_matrix_bird_2 << 	anchor_0.mPos[0], anchor_0.mPos[1], anchor_0.mPos[2],
+							anchor_1.mPos[0], anchor_1.mPos[1], anchor_1.mPos[2],
+							anchor_2.mPos[0], anchor_2.mPos[1], anchor_2.mPos[2],
+						    anchor_3.mPos[0], anchor_3.mPos[1], anchor_3.mPos[2];
+
+Eigen::MatrixXd geometric_matrix_bird_3(4, GetDim());
+geometric_matrix_bird_3 <<	anchor_1.mPos[0], anchor_1.mPos[1], anchor_1.mPos[2],
+							anchor_2.mPos[0], anchor_2.mPos[1], anchor_2.mPos[2],
+							anchor_3.mPos[0], anchor_3.mPos[1], anchor_3.mPos[2],
+						    anchor_4.mPos[0], anchor_4.mPos[1], anchor_4.mPos[2];
+
+Eigen::MatrixXd geometric_matrix_bird_4(4, GetDim());
+geometric_matrix_bird_4 <<	anchor_2.mPos[0], anchor_2.mPos[1], anchor_2.mPos[2],
+							anchor_3.mPos[0], anchor_3.mPos[1], anchor_3.mPos[2],
+							anchor_4.mPos[0], anchor_4.mPos[1], anchor_4.mPos[2],
+						    anchor_4.mPos[0], anchor_4.mPos[1], anchor_4.mPos[2];
+
+// Eigen::MatrixXd geometric_matrix_bird_5(4, GetDim());
+// geometric_matrix_bird_5 <<	anchor_1.mPos[0], anchor_1.mPos[1], anchor_1.mPos[2],
+// 							anchor_2.mPos[0], anchor_2.mPos[1], anchor_2.mPos[2],
+// 							anchor_3.mPos[0], anchor_3.mPos[1], anchor_3.mPos[2],
+// 						    anchor_4.mPos[0], anchor_4.mPos[1], anchor_4.mPos[2];
+
+// Time Vector Construction
+Eigen::Vector4d time_vector;
+time_vector << time*time*time, time*time, time, 1.00000000;
+switch (mCurveType)
+{
+case eCurveTypeCatmullRom:
+if (time <= GetAnchorTime(0)) {
+	//time = time - GetAnchorTime(1);
+	out_result =  0.5 * time_vector.transpose() * basis_matrix_bird_cr * geometric_matrix_bird_1;
+}
+else if (time <= GetAnchorTime(1)) {
+	//time = time - GetAnchorTime(1);
+	out_result =  0.5 * time_vector.transpose() * basis_matrix_bird_cr * geometric_matrix_bird_2;
+}
+else if (time <= GetAnchorTime(2)) {
+	//time = time - GetAnchorTime(2);
+	out_result =  0.5 * time_vector.transpose() * basis_matrix_bird_cr * geometric_matrix_bird_3;
+}
+else if (time <= GetAnchorTime(3)) {
+	//time = time - GetAnchorTime(3);
+	out_result =  0.5 * time_vector.transpose() * basis_matrix_bird_cr * geometric_matrix_bird_4;
+}
+	break;
+case eCurveTypeBSpline:
+if (time <= GetAnchorTime(1)) {
+	out_result =  0.1666666667 * time_vector.transpose() * basis_matrix_bird_bs * geometric_matrix_bird_1;
+}
+else if (time <= GetAnchorTime(2)) {
+	time = time - GetAnchorTime(2);
+	out_result =  0.1666666667 * time_vector.transpose() * basis_matrix_bird_bs * geometric_matrix_bird_2;
+}
+else if (time <= GetAnchorTime(3)) {
+	time = time - GetAnchorTime(3);
+	out_result =  0.1666666667 * time_vector.transpose() * basis_matrix_bird_bs * geometric_matrix_bird_3;
+}
+else if (time <= GetAnchorTime(4)) {
+	time = time - GetAnchorTime(4);
+	out_result =  0.1666666667 * time_vector.transpose() * basis_matrix_bird_bs * geometric_matrix_bird_4;
+}
+		break;
+default:
+	assert(false); // unsuppoted curve type
+	break;
+}
 	// first build the basis matrix M for the current curve style (mCurveType)
 	// then build the T polynomial vector
 	// finally build the geometry matrix G for the curve segment
@@ -176,7 +269,46 @@ void cCurve::EvalTangent(double time, Eigen::VectorXd& out_result) const
 {
 	// TODO (CPSC426): Evaluates the first derivative of a curve
 	out_result = Eigen::VectorXd::Zero(GetDim()); // stub
-	out_result[0] = 1; // stub, all tangents are horizontal
+
+	const tAnchor& anchor_0 = mAnchors[0];
+	const tAnchor& anchor_1 = mAnchors[1];
+	const tAnchor& anchor_2 = mAnchors[2];
+	const tAnchor& anchor_3 = mAnchors[3];
+	const tAnchor& anchor_4 = mAnchors[4];
+
+	std::cout << GetAnchorTime(0) << std::endl;
+	std::cout << GetAnchorTime(1) << std::endl;
+	std::cout << GetAnchorTime(2) << std::endl;
+	std::cout << GetAnchorTime(3) << std::endl;
+
+// Basis Matrix Construction B-SPLINE
+Eigen::Matrix4d basis_matrix_bird_bs;
+basis_matrix_bird_bs << -1.0, 3.0, -3.0, 1.0,
+						 3.0,-6.0,  3.0, 0.0,
+						-3.0, 0.0,  3.0, 0.0,
+						 1.0, 4.0,  1.0, 0.0;
+
+// Basis Matrix Construction CATMULL_ROM
+Eigen::Matrix4d basis_matrix_bird_cr;
+basis_matrix_bird_cr << -1.0,  3.0, -3.0,  1.0,
+						 2.0, -5.0,  4.0, -1.0,
+						-1.0,  0.0,  1.0,  0.0,
+						 0.0,  2.0,  0.0,  0.0;
+
+Eigen::Vector4d tangent_time_vector;
+tangent_time_vector << 3*time*time, 2*time, 1.00000000, 0.00000;
+
+switch(mCurveType){
+	case eCurveTypeCatmullRom:
+	break;
+	case eCurveTypeBSpline:
+	break;
+	default: 
+		assert(false);
+		break;
+}
+
+
 }
 
 void cCurve::EvalNormal(double time, Eigen::VectorXd& out_result) const

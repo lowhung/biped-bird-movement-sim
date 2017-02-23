@@ -66,6 +66,7 @@ void EigenExamples()
 	std::cout << "M4" << std::endl;
 	std::cout << M4 << std::endl << std::endl;
 
+
 }
 
 int main(int argc, char ** argv) {
