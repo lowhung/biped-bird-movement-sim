@@ -253,10 +253,7 @@ break;
 default:
 	assert(false); // unsupported curve type
 	break;
-}
-	// first build the basis matrix M for the current curve style (mCurveType)
-	// then build the T polynomial vector
-	// finally build the geometry matrix G for the curve segment
+	}
 }
 
 void cCurve::EvalTangent(double time, Eigen::VectorXd& out_result) const
@@ -265,114 +262,103 @@ void cCurve::EvalTangent(double time, Eigen::VectorXd& out_result) const
 	out_result = Eigen::VectorXd::Zero(GetDim()); // stub
 	// out_result[0] = 1;
 
-	const tAnchor& anchor_0 = mAnchors[0];
-	const tAnchor& anchor_1 = mAnchors[1];
-	const tAnchor& anchor_2 = mAnchors[2];
-	const tAnchor& anchor_3 = mAnchors[3];
-	const tAnchor& anchor_4 = mAnchors[4];
+	int numDim = GetDim();
+	int numAnc = GetNumAnchors();
+	Eigen::MatrixXd geometry_matrix(numAnc, numDim);
+
+	for (int i = 0; i < numAnc; i++){
+		const tAnchor& anchor = mAnchors[i];
+		for (int j = 0; j < numDim; j++){
+			geometry_matrix(i, j) = anchor.mPos[j];
+		}
+	}
 
 // Basis Matrix Construction B-SPLINE
 Eigen::Matrix4d basis_matrix_bird_bs;
-basis_matrix_bird_bs << -1.0, 3.0, -3.0, 1.0,
-						 3.0,-6.0,  3.0, 0.0,
-						-3.0, 0.0,  3.0, 0.0,
-						 1.0, 4.0,  1.0, 0.0;
+basis_matrix_bird_bs << -1.000, 3.000, -3.000, 1.000,
+						 3.000,-6.000,  3.000, 0.000,
+						-3.000, 0.000,  3.000, 0.000,
+						 1.000, 4.000,  1.000, 0.000;
 
 // Basis Matrix Construction CATMULL_ROM
 Eigen::Matrix4d basis_matrix_bird_cr;
-basis_matrix_bird_cr << -1.0,  3.0, -3.0,  1.0,
-						 2.0, -5.0,  4.0, -1.0,
-						-1.0,  0.0,  1.0,  0.0,
-						 0.0,  2.0,  0.0,  0.0;
+basis_matrix_bird_cr << -1.000,  3.000, -3.000,  1.000,
+						 2.000, -5.000,  4.000, -1.000,
+						-1.000,  0.000,  1.000,  0.000,
+						 0.000,  2.000,  0.000,  0.000;
 
-// Geometric Matrix Construction 
-Eigen::MatrixXd geometric_matrix_bird_0(4, GetDim());
-geometric_matrix_bird_0 <<	anchor_0.mPos[0], anchor_0.mPos[1], anchor_0.mPos[2],
-							anchor_0.mPos[0], anchor_0.mPos[1], anchor_0.mPos[2],
-							anchor_0.mPos[0], anchor_0.mPos[1], anchor_0.mPos[2],
-						    anchor_1.mPos[0], anchor_1.mPos[1], anchor_1.mPos[2];
-
-Eigen::MatrixXd geometric_matrix_bird_1(4, GetDim());
-geometric_matrix_bird_1 <<	anchor_0.mPos[0], anchor_0.mPos[1], anchor_0.mPos[2],
-							anchor_0.mPos[0], anchor_0.mPos[1], anchor_0.mPos[2],
-							anchor_1.mPos[0], anchor_1.mPos[1], anchor_1.mPos[2],
-						    anchor_2.mPos[0], anchor_2.mPos[1], anchor_2.mPos[2];
-
-Eigen::MatrixXd geometric_matrix_bird_2(4, GetDim());
-geometric_matrix_bird_2 << 	anchor_0.mPos[0], anchor_0.mPos[1], anchor_0.mPos[2],
-							anchor_1.mPos[0], anchor_1.mPos[1], anchor_1.mPos[2],
-							anchor_2.mPos[0], anchor_2.mPos[1], anchor_2.mPos[2],
-						    anchor_3.mPos[0], anchor_3.mPos[1], anchor_3.mPos[2];
-
-Eigen::MatrixXd geometric_matrix_bird_3(4, GetDim());
-geometric_matrix_bird_3 <<	anchor_1.mPos[0], anchor_1.mPos[1], anchor_1.mPos[2],
-							anchor_2.mPos[0], anchor_2.mPos[1], anchor_2.mPos[2],
-							anchor_3.mPos[0], anchor_3.mPos[1], anchor_3.mPos[2],
-						    anchor_4.mPos[0], anchor_4.mPos[1], anchor_4.mPos[2];
-
-Eigen::MatrixXd geometric_matrix_bird_4(4, GetDim());
-geometric_matrix_bird_4 <<	anchor_2.mPos[0], anchor_2.mPos[1], anchor_2.mPos[2],
-							anchor_3.mPos[0], anchor_3.mPos[1], anchor_3.mPos[2],
-							anchor_4.mPos[0], anchor_4.mPos[1], anchor_4.mPos[2],
-						    anchor_4.mPos[0], anchor_4.mPos[1], anchor_4.mPos[2];
-
-Eigen::MatrixXd geometric_matrix_bird_5(4, GetDim());
-geometric_matrix_bird_5 <<	anchor_3.mPos[0], anchor_3.mPos[1], anchor_3.mPos[2],
-							anchor_4.mPos[0], anchor_4.mPos[1], anchor_4.mPos[2],
-							anchor_4.mPos[0], anchor_4.mPos[1], anchor_4.mPos[2],
-						    anchor_4.mPos[0], anchor_4.mPos[1], anchor_4.mPos[2];
 
 // Time Vector Construction
 Eigen::Vector4d tangent_time_vector;
 int n_seg = (int) time;
 float t_seg = time - n_seg;
-tangent_time_vector << 3*t_seg*t_seg, 2*t_seg, 1, 0;
+tangent_time_vector << 3*t_seg*t_seg, 2*t_seg, 1.000, 0.000;
+
+Eigen::MatrixXd begin_vector(1, GetDim());
+Eigen::MatrixXd end_vector(1, GetDim());
+
+begin_vector << geometry_matrix.row(0);
+end_vector << geometry_matrix.row(GetNumAnchors()-1);
+
+Eigen::MatrixXd geometry_matrix_begin_cr(numAnc+1, numDim);
+Eigen::MatrixXd geometry_matrix_end_cr(numAnc+1, numDim);
+int anchor_beg, anchor_end, anchor_beg_one;
+geometry_matrix_begin_cr << begin_vector, geometry_matrix;
+geometry_matrix_end_cr << geometry_matrix, end_vector;
+GetAnchors(n_seg, anchor_beg, anchor_end);
+
+Eigen::MatrixXd geometry_matrix_bs(numAnc+4, numDim);
+Eigen::MatrixXd geometry_matrix_end_bs(numAnc+2, numDim);
+geometry_matrix_bs << begin_vector, begin_vector, geometry_matrix, end_vector, end_vector;
+geometry_matrix_end_bs << geometry_matrix, end_vector, end_vector;
 
 switch (mCurveType)
 {
 case eCurveTypeCatmullRom:
+
 if (n_seg == 0){
-	out_result =  0.5 * tangent_time_vector.transpose() * basis_matrix_bird_cr * geometric_matrix_bird_1;
+	out_result = 0.5 * tangent_time_vector.transpose() * basis_matrix_bird_cr * geometry_matrix_begin_cr.block(0, 0, 4, GetDim());
 }
-else if (n_seg == 1) {
-	out_result = 0.5 * tangent_time_vector.transpose() * basis_matrix_bird_cr * geometric_matrix_bird_2;
+else if (0 < n_seg && n_seg < GetNumSegments()-1){
+	if (anchor_beg == -1){
+		anchor_beg_one = 0;
+		out_result = 0.5 * tangent_time_vector.transpose() * basis_matrix_bird_cr * geometry_matrix.block(anchor_beg_one, 0, 4, GetDim());
+	}
+	else {
+		out_result = 0.5 * tangent_time_vector.transpose() * basis_matrix_bird_cr * geometry_matrix.block(anchor_beg, 0, 4, GetDim());
+	}
 }
-else if (n_seg == 2) {
-	out_result = 0.5 * tangent_time_vector.transpose() * basis_matrix_bird_cr * geometric_matrix_bird_3;
-}
-else if (n_seg == 3) {
-	out_result = 0.5 * tangent_time_vector.transpose() * basis_matrix_bird_cr * geometric_matrix_bird_4;
+else if (n_seg == GetNumSegments()-1){
+	out_result = 0.5 * tangent_time_vector.transpose() * basis_matrix_bird_cr * geometry_matrix_end_cr.block(anchor_beg, 0, 4, GetDim());
 } 
-else if (n_seg == 4) {
-	out_result = 0.5 * tangent_time_vector.transpose() * basis_matrix_bird_cr * geometric_matrix_bird_5;
-}
 break;
 
-
 case eCurveTypeBSpline:
+
 if (n_seg == 0){
-	out_result = 0.1666666667 * tangent_time_vector.transpose() * basis_matrix_bird_bs * geometric_matrix_bird_0;
+	out_result = 0.1666666667 * tangent_time_vector.transpose() * basis_matrix_bird_bs * geometry_matrix_bs.block(0, 0, 4, GetDim());
 }
-else if (n_seg == 1) {
-	out_result = 0.1666666667 * tangent_time_vector.transpose() * basis_matrix_bird_bs * geometric_matrix_bird_1;
+else if (0 < n_seg && n_seg < GetNumSegments()-1){
+	if (anchor_beg == -2){
+		anchor_beg_one = 0;
+		out_result = 0.1666666667 * tangent_time_vector.transpose() * basis_matrix_bird_bs * geometry_matrix_bs.block(anchor_beg_one, 0, 4, GetDim());
+	}
+	else if (anchor_beg == -1){
+		anchor_beg_one = 1;
+		out_result = 0.1666666667 * tangent_time_vector.transpose() * basis_matrix_bird_bs * geometry_matrix_bs.block(anchor_beg_one, 0, 4, GetDim());
+	}
+	else 
+	out_result = 0.1666666667 * tangent_time_vector.transpose() * basis_matrix_bird_bs * geometry_matrix_end_cr.block(anchor_beg, 0, 4, GetDim());	
 }
-else if (n_seg == 2) {
-	out_result = 0.1666666667 * tangent_time_vector.transpose() * basis_matrix_bird_bs * geometric_matrix_bird_2;
-}
-else if (n_seg == 3) {
-	out_result = 0.1666666667 * tangent_time_vector.transpose() * basis_matrix_bird_bs * geometric_matrix_bird_3;
-}
-else if (n_seg == 4) {
-	out_result = 0.1666666667 * tangent_time_vector.transpose() * basis_matrix_bird_bs * geometric_matrix_bird_4;
-}
-else if (n_seg == 5) {
-	out_result = 0.1666666667 * tangent_time_vector.transpose() * basis_matrix_bird_bs * geometric_matrix_bird_5;
-}
-		break;
+else if (n_seg == GetNumSegments()-1){
+	out_result = 0.1666666667 * tangent_time_vector.transpose() * basis_matrix_bird_bs * geometry_matrix_end_bs.block(anchor_beg, 0, 4, GetDim());
+} 
+break;
+
 default:
-	assert(false); // unsuppoted curve type
+	assert(false); // unsupported curve type
 	break;
-}
+	}
 }
 
 
@@ -381,114 +367,108 @@ void cCurve::EvalNormal(double time, Eigen::VectorXd& out_result) const
 	out_result = Eigen::VectorXd::Zero(GetDim()); // stub
 	//out_result[0] = 1;
 
-	const tAnchor& anchor_0 = mAnchors[0];
-	const tAnchor& anchor_1 = mAnchors[1];
-	const tAnchor& anchor_2 = mAnchors[2];
-	const tAnchor& anchor_3 = mAnchors[3];
-	const tAnchor& anchor_4 = mAnchors[4];
+	int numDim = GetDim();
+	int numAnc = GetNumAnchors();
+	Eigen::MatrixXd geometry_matrix(numAnc, numDim);
+
+	for (int i = 0; i < numAnc; i++){
+		const tAnchor& anchor = mAnchors[i];
+		for (int j = 0; j < numDim; j++){
+			geometry_matrix(i, j) = anchor.mPos[j];
+		}
+	}
 
 // Basis Matrix Construction B-SPLINE
 Eigen::Matrix4d basis_matrix_bird_bs;
-basis_matrix_bird_bs << -1.0, 3.0, -3.0, 1.0,
-						 3.0,-6.0,  3.0, 0.0,
-						-3.0, 0.0,  3.0, 0.0,
-						 1.0, 4.0,  1.0, 0.0;
+basis_matrix_bird_bs << -1.000, 3.000, -3.000, 1.000,
+						 3.000,-6.000,  3.000, 0.000,
+						-3.000, 0.000,  3.000, 0.000,
+						 1.000, 4.000,  1.000, 0.000;
 
 // Basis Matrix Construction CATMULL_ROM
 Eigen::Matrix4d basis_matrix_bird_cr;
-basis_matrix_bird_cr << -1.0,  3.0, -3.0,  1.0,
-						 2.0, -5.0,  4.0, -1.0,
-						-1.0,  0.0,  1.0,  0.0,
-						 0.0,  2.0,  0.0,  0.0;
+basis_matrix_bird_cr << -1.000,  3.000, -3.000,  1.000,
+						 2.000, -5.000,  4.000, -1.000,
+						-1.000,  0.000,  1.000,  0.000,
+						 0.000,  2.000,  0.000,  0.000;
 
-// Geometric Matrix Construction 
-Eigen::MatrixXd geometric_matrix_bird_0(4, GetDim());
-geometric_matrix_bird_0 <<	anchor_0.mPos[0], anchor_0.mPos[1], anchor_0.mPos[2],
-							anchor_0.mPos[0], anchor_0.mPos[1], anchor_0.mPos[2],
-							anchor_0.mPos[0], anchor_0.mPos[1], anchor_0.mPos[2],
-						    anchor_1.mPos[0], anchor_1.mPos[1], anchor_1.mPos[2];
-
-Eigen::MatrixXd geometric_matrix_bird_1(4, GetDim());
-geometric_matrix_bird_1 <<	anchor_0.mPos[0], anchor_0.mPos[1], anchor_0.mPos[2],
-							anchor_0.mPos[0], anchor_0.mPos[1], anchor_0.mPos[2],
-							anchor_1.mPos[0], anchor_1.mPos[1], anchor_1.mPos[2],
-						    anchor_2.mPos[0], anchor_2.mPos[1], anchor_2.mPos[2];
-
-Eigen::MatrixXd geometric_matrix_bird_2(4, GetDim());
-geometric_matrix_bird_2 << 	anchor_0.mPos[0], anchor_0.mPos[1], anchor_0.mPos[2],
-							anchor_1.mPos[0], anchor_1.mPos[1], anchor_1.mPos[2],
-							anchor_2.mPos[0], anchor_2.mPos[1], anchor_2.mPos[2],
-						    anchor_3.mPos[0], anchor_3.mPos[1], anchor_3.mPos[2];
-
-Eigen::MatrixXd geometric_matrix_bird_3(4, GetDim());
-geometric_matrix_bird_3 <<	anchor_1.mPos[0], anchor_1.mPos[1], anchor_1.mPos[2],
-							anchor_2.mPos[0], anchor_2.mPos[1], anchor_2.mPos[2],
-							anchor_3.mPos[0], anchor_3.mPos[1], anchor_3.mPos[2],
-						    anchor_4.mPos[0], anchor_4.mPos[1], anchor_4.mPos[2];
-
-Eigen::MatrixXd geometric_matrix_bird_4(4, GetDim());
-geometric_matrix_bird_4 <<	anchor_2.mPos[0], anchor_2.mPos[1], anchor_2.mPos[2],
-							anchor_3.mPos[0], anchor_3.mPos[1], anchor_3.mPos[2],
-							anchor_4.mPos[0], anchor_4.mPos[1], anchor_4.mPos[2],
-						    anchor_4.mPos[0], anchor_4.mPos[1], anchor_4.mPos[2];
-
-Eigen::MatrixXd geometric_matrix_bird_5(4, GetDim());
-geometric_matrix_bird_5 <<	anchor_3.mPos[0], anchor_3.mPos[1], anchor_3.mPos[2],
-							anchor_4.mPos[0], anchor_4.mPos[1], anchor_4.mPos[2],
-							anchor_4.mPos[0], anchor_4.mPos[1], anchor_4.mPos[2],
-						    anchor_4.mPos[0], anchor_4.mPos[1], anchor_4.mPos[2];
 
 // Time Vector Construction
-Eigen::Vector4d normal_time_vector;
+//Eigen::Vector4d tangent_time_vector;
 int n_seg = (int) time;
 float t_seg = time - n_seg;
-normal_time_vector << 6*t_seg, 2, 0, 0;
+
+ Eigen::Vector4d normal_time_vector;
+// int n_seg = (int) time;
+// float t_seg = time - n_seg;
+normal_time_vector << 6*t_seg, 2.000, 0.000, 0.000;
+//tangent_time_vector << t_seg*t_seg*t_seg, t_seg*t_seg, t_seg, 1;
+
+Eigen::MatrixXd begin_vector(1, GetDim());
+Eigen::MatrixXd end_vector(1, GetDim());
+
+begin_vector << geometry_matrix.row(0);
+end_vector << geometry_matrix.row(GetNumAnchors()-1);
+
+Eigen::MatrixXd geometry_matrix_begin_cr(numAnc+1, numDim);
+Eigen::MatrixXd geometry_matrix_end_cr(numAnc+1, numDim);
+int anchor_beg, anchor_end, anchor_beg_one;
+geometry_matrix_begin_cr << begin_vector, geometry_matrix;
+geometry_matrix_end_cr << geometry_matrix, end_vector;
+GetAnchors(n_seg, anchor_beg, anchor_end);
+
+Eigen::MatrixXd geometry_matrix_bs(numAnc+4, numDim);
+Eigen::MatrixXd geometry_matrix_end_bs(numAnc+2, numDim);
+geometry_matrix_bs << begin_vector, begin_vector, geometry_matrix, end_vector, end_vector;
+geometry_matrix_end_bs << geometry_matrix, end_vector, end_vector;
 
 switch (mCurveType)
 {
 case eCurveTypeCatmullRom:
+
 if (n_seg == 0){
-	out_result =  0.5 * normal_time_vector.transpose() * basis_matrix_bird_cr * geometric_matrix_bird_1;
+	out_result = 0.5 * normal_time_vector.transpose() * basis_matrix_bird_cr * geometry_matrix_begin_cr.block(0, 0, 4, GetDim());
 }
-else if (n_seg == 1) {
-	out_result = 0.5 * normal_time_vector.transpose() * basis_matrix_bird_cr * geometric_matrix_bird_2;
+else if (0 < n_seg && n_seg < GetNumSegments()-1){
+	if (anchor_beg == -1){
+		anchor_beg_one = 0;
+		out_result = 0.5 * normal_time_vector.transpose() * basis_matrix_bird_cr * geometry_matrix.block(anchor_beg_one, 0, 4, GetDim());
+	}
+	else {
+		out_result = 0.5 * normal_time_vector.transpose() * basis_matrix_bird_cr * geometry_matrix.block(anchor_beg, 0, 4, GetDim());
+	}
 }
-else if (n_seg == 2) {
-	out_result = 0.5 * normal_time_vector.transpose() * basis_matrix_bird_cr * geometric_matrix_bird_3;
-}
-else if (n_seg == 3) {
-	out_result = 0.5 * normal_time_vector.transpose() * basis_matrix_bird_cr * geometric_matrix_bird_4;
+else if (n_seg == GetNumSegments()-1){
+	out_result = 0.5 * normal_time_vector.transpose() * basis_matrix_bird_cr * geometry_matrix_end_cr.block(anchor_beg, 0, 4, GetDim());
 } 
-else if (n_seg == 4) {
-	out_result = 0.5 * normal_time_vector.transpose() * basis_matrix_bird_cr * geometric_matrix_bird_5;
-}
 break;
 
-
 case eCurveTypeBSpline:
+
 if (n_seg == 0){
-	out_result = 0.1666666667 * normal_time_vector.transpose() * basis_matrix_bird_bs * geometric_matrix_bird_0;
+	out_result = 0.1666666667 * normal_time_vector.transpose() * basis_matrix_bird_bs * geometry_matrix_bs.block(0, 0, 4, GetDim());
 }
-else if (n_seg == 1) {
-	out_result = 0.1666666667 * normal_time_vector.transpose() * basis_matrix_bird_bs * geometric_matrix_bird_1;
+else if (0 < n_seg && n_seg < GetNumSegments()-1){
+	if (anchor_beg == -2){
+		anchor_beg_one = 0;
+		out_result = 0.1666666667 * normal_time_vector.transpose() * basis_matrix_bird_bs * geometry_matrix_bs.block(anchor_beg_one, 0, 4, GetDim());
+	}
+	else if (anchor_beg == -1){
+		anchor_beg_one = 1;
+		out_result = 0.1666666667 * normal_time_vector.transpose() * basis_matrix_bird_bs * geometry_matrix_bs.block(anchor_beg_one, 0, 4, GetDim());
+	}
+	else 
+	out_result = 0.1666666667 * normal_time_vector.transpose() * basis_matrix_bird_bs * geometry_matrix_end_cr.block(anchor_beg, 0, 4, GetDim());	
 }
-else if (n_seg == 2) {
-	out_result = 0.1666666667 * normal_time_vector.transpose() * basis_matrix_bird_bs * geometric_matrix_bird_2;
-}
-else if (n_seg == 3) {
-	out_result = 0.1666666667 * normal_time_vector.transpose() * basis_matrix_bird_bs * geometric_matrix_bird_3;
-}
-else if (n_seg == 4) {
-	out_result = 0.1666666667 * normal_time_vector.transpose() * basis_matrix_bird_bs * geometric_matrix_bird_4;
-}
-else if (n_seg == 5) {
-	out_result = 0.1666666667 * normal_time_vector.transpose() * basis_matrix_bird_bs * geometric_matrix_bird_5;
-}
-		break;
+else if (n_seg == GetNumSegments()-1){
+	out_result = 0.1666666667 * normal_time_vector.transpose() * basis_matrix_bird_bs * geometry_matrix_end_bs.block(anchor_beg, 0, 4, GetDim());
+} 
+break;
+
 default:
-	assert(false); // unsuppoted curve type
+	assert(false); // unsupported curve type
 	break;
-}
+	}
 }
 
 double cCurve::GetMaxTime() const
