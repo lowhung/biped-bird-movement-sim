@@ -137,11 +137,39 @@ void cBirdScenario::UpdateCharacter()
 	double curr_time = mTime;
 	curr_time = std::fmod(curr_time, max_time);
 
+	Eigen::VectorXd tangent_vector;
+	Eigen::VectorXd n_vector;
+	
+	Eigen::Vector3d binormal_vector;
+	Eigen::Vector3d tangent_vector_used;
+	Eigen::Vector3d n_vector_used;
+	Eigen::Vector3d normal_vector;
+
+	// Get Tangent and Normal information
+	mCurve.EvalTangent(curr_time, tangent_vector); // T = P' vector
+	mCurve.EvalNormal(curr_time, n_vector);  // P'' vector
+
+	// Turn these vectors into 3D vectors
+	tangent_vector_used = tangent_vector.segment(0,3);
+	n_vector_used = n_vector.segment(0,3);
+
+	// Final B and N vectors via cross
+	binormal_vector = tangent_vector_used.cross(n_vector_used); // B = P' x P'' 
+	normal_vector = binormal_vector.cross(tangent_vector_used); // N = B x T  
+
+	// Normalize the vectors
+	binormal_vector = binormal_vector.normalized(); 
+	normal_vector = normal_vector.normalized(); 
+	tangent_vector_used = tangent_vector_used.normalized();
+	
 	Eigen::VectorXd pos_data;
 	mCurve.Eval(curr_time, pos_data);
 
 	tVector pos = tVector(pos_data[0], pos_data[1], pos_data[2], 0);
 	mCharTransform.setIdentity();
+	mCharTransform.block(0, 0, 3, 1) = tangent_vector_used.segment(0, 3);
+	mCharTransform.block(0, 1, 3, 1) = normal_vector.segment(0, 3);
+	mCharTransform.block(0, 2, 3, 1) = binormal_vector.segment(0, 3);
 	mCharTransform.block(0, 3, 3, 1) = pos.segment(0, 3);
 }
 
