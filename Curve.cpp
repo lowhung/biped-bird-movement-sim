@@ -250,7 +250,7 @@ else if (0 < n_seg && n_seg < GetNumSegments()-1){
 		anchor_beg_one = 1;
 		out_result = time_vector.transpose() * basis_matrix_bird_bs * geometry_matrix_bs.block(anchor_beg_one, 0, 4, GetDim());
 	}
-	else 
+	else
 		out_result = time_vector.transpose() * basis_matrix_bird_bs * geometry_matrix_end_cr.block(anchor_beg, 0, 4, GetDim());	
 }
 else if (n_seg == GetNumSegments()-1){

@@ -144,6 +144,9 @@ void cBirdScenario::UpdateCharacter()
 	Eigen::Vector3d tangent_vector_used;
 	Eigen::Vector3d n_vector_used;
 	Eigen::Vector3d normal_vector;
+	Eigen::Vector3d offset_vector;
+
+	offset_vector << 0.00, 0.01, 0.01;
 
 	// Get Tangent and Normal information
 	mCurve.EvalTangent(curr_time, tangent_vector); // T = P' vector
@@ -155,6 +158,15 @@ void cBirdScenario::UpdateCharacter()
 
 	// Final B and N vectors via cross
 	binormal_vector = tangent_vector_used.cross(n_vector_used); // B = P' x P'' 
+	//double epsilon = binormal_vector.tail(1);
+
+	if (binormal_vector.norm() < 0.01){
+		n_vector_used = n_vector_used + offset_vector;
+		binormal_vector = tangent_vector_used.cross(n_vector_used);
+	}
+	//std::cout << binormal_vector(2) << std::endl;
+ 
+
 	normal_vector = binormal_vector.cross(tangent_vector_used); // N = B x T  
 
 	// Normalize the vectors
