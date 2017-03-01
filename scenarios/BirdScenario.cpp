@@ -146,7 +146,7 @@ void cBirdScenario::UpdateCharacter()
 	Eigen::Vector3d normal_vector;
 	Eigen::Vector3d offset_vector;
 
-	offset_vector << 0.00, 0.01, 0.01;
+	offset_vector << 0.01, 0.01, 0.01;
 
 	// Get Tangent and Normal information
 	mCurve.EvalTangent(curr_time, tangent_vector); // T = P' vector

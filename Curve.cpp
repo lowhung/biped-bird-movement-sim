@@ -187,18 +187,28 @@ basis_matrix_bird_cr = 0.5 * basis_matrix_bird_cr;
 
 // Time Vector Construction
 Eigen::Vector4d time_vector;
-//int n_seg = (int) time;
 
-int total_seg = 0;
+double total_seg = 0;
 int n_seg;
 
+// for (n_seg = 0; n_seg < GetNumSegments(); n_seg++){
+// 	total_seg += GetSegDuration(n_seg);
+// 	//std::cout << (time - total_seg)/time << std::endl;
+// 	if((time - total_seg)/time <= 0){
+// 		break;
+// 	}
+// }
 for (n_seg = 0; n_seg < GetNumSegments(); n_seg++){
 	total_seg += GetSegDuration(n_seg);
-	if((time - total_seg)/time <= 0){
+	//std::cout << total_seg << std::endl;
+	if(time <= total_seg){
 		break;
 	}
 }
-double t_seg = time-n_seg;
+
+double t_seg = time - n_seg*GetSegDuration(n_seg);
+
+
 time_vector << t_seg*t_seg*t_seg, t_seg*t_seg, t_seg, 1;
 
 // Appended Vector Initialization
