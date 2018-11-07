@@ -1,6 +1,6 @@
 
 -----------------------
- COMPILING CPSC426
+ COMPILING MOVEMENT SIM
 -----------------------
 
 Below are quick instructions for compiling with default options. 
